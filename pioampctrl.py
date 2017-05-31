@@ -45,7 +45,6 @@ class avrConnection(asyncore.dispatcher):
         self.buffer = self.buffer[sent:]
 
     def sendCommand(self, message):
-        # self.buffer += bytes(message, 'UTF-8')
         self.buffer += message.encode('UTF-8')
 
 
