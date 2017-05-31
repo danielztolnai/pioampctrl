@@ -2,6 +2,7 @@
 import socket
 import asyncore
 import threading
+import os
 from gi.repository import Gtk
 from gi.repository import Gdk
 from gi.repository import AppIndicator3 as appindicator
@@ -231,9 +232,10 @@ class avrIndicator:
 
     def __init__(self, avrControllerInstance):
         self.avr = avrControllerInstance
+        path = os.path.dirname(os.path.realpath(__file__))
         self.indicator = appindicator.Indicator.new(
                             'avrcontroller',
-                            'amp.svg',
+                            os.path.join(path, 'amp.svg'),
                             appindicator.IndicatorCategory.HARDWARE
                         )
         self.indicator.set_status(appindicator.IndicatorStatus.ACTIVE)
