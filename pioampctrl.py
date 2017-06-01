@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import socket
-import asyncore
+import select
 import threading
 import os
 from gi.repository import Gtk
@@ -11,38 +11,65 @@ TCP_IP = '192.168.213.192'
 TCP_PORT = 8102
 
 
-class avrConnection(asyncore.dispatcher):
+class avrConnection:
     def __init__(self, host, port):
-        asyncore.dispatcher.__init__(self)
+        self.host = host
+        self.port = port
         self.avr = None
-        self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.connect((host, port))
+        self.worker = None
         self.buffer = bytes()
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.connect()
+
+    def connect(self):
+        self.socket.connect((self.host, self.port))
+
+    def checkConnection(self):
+        err = self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
+        if err != 0:
+            raise socket.error(err, os.strerror(err))
+
+    def close(self):
+        self.running = False
+        self.worker.join()
+        self.socket.close()
+
+    def loop(self):
+        self.running = True
+        rsl = (self.socket,)
+        while self.running:
+            if self.writable():
+                wsl = rsl
+            else:
+                wsl = ()
+
+            r, w, e = select.select(rsl, wsl, rsl, 0.5)
+
+            if r != []:
+                self.read()
+            if w != []:
+                self.write()
 
     def runInThread(self):
-        connectionThread = threading.Thread(target=asyncore.loop, args=(0.5,))
-        connectionThread.start()
+        self.worker = threading.Thread(target=self.loop)
+        self.worker.start()
 
     def setController(self, avrControllerInstance):
         self.avr = avrControllerInstance
 
-    def handle_connect(self):
-        pass
+    def writable(self):
+        return (len(self.buffer) > 0)
 
-    def handle_close(self):
-        self.close()
-
-    def handle_read(self):
-        line = self.recv(1024).decode(encoding='UTF-8').strip()
+    def read(self):
+        self.checkConnection()
+        line = self.socket.recv(1024).decode(encoding='UTF-8').strip()
         lines = line.split('\n')
         for line in lines:
             self.avr.parseMessage(line.strip())
 
-    def writable(self):
-        return (len(self.buffer) > 0)
-
-    def handle_write(self):
-        sent = self.send(self.buffer)
+    def write(self):
+        self.checkConnection()
+        sent = self.socket.send(self.buffer)
         self.buffer = self.buffer[sent:]
 
     def sendCommand(self, message):
