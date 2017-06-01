@@ -88,6 +88,7 @@ class avrConnection:
 
 class avrController:
     def __init__(self):
+        self.volumeLimits = {'min': -80, 'max': 12, 'step': 0.5}
         self.speakerConfigs = {0: 'Off', 1: 'A', 2: 'B', 3: 'AB'}
         self.dispatch = {'VOL': self.parseVolume,
                          'PWR': self.parsePower,
@@ -182,7 +183,7 @@ class avrController:
     def getPower(self):
         self.sendCommand("?P")
 
-    def setPower(self, power):
+    def setPower(self, power=2):
         if int(power) == self.power:
             return True
         else:
@@ -285,7 +286,7 @@ class avrIndicator:
     # Menu item creators
     def createPowerButton(self):
         item = Gtk.CheckMenuItem('Power')
-        item.connect('button-press-event', self.itemCmd, self.avr.setPower, 2)
+        item.connect('button-press-event', self.itemCmd, self.avr.setPower)
         return item
 
     def createVolumeButton(self):
@@ -376,7 +377,11 @@ class avrIndicator:
         command(*args)
 
     def volumeCmd(self):
-        v = self.getSlider("Volume (dB)", -80, 12, -0.5, self.avr.volume)
+        v = self.getSlider("Volume (dB)",
+                           self.avr.volumeLimits['min'],
+                           self.avr.volumeLimits['max'],
+                           -self.avr.volumeLimits['step'],
+                           self.avr.volume)
         self.avr.setVolume(v)
 
     def getSlider(self, text, smin, smax, sstep, svalue):
