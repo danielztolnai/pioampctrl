@@ -8,13 +8,13 @@ from gi.repository import Gdk
 from gi.repository import AppIndicator3 as appindicator
 
 TCP_IP = '192.168.213.192'
-TCP_PORT = 8102
+TCP_PORTS = (23, 8102, 49152, 49153, 49154)
 
 
 class avrConnection:
-    def __init__(self, host, port):
+    def __init__(self, host, ports):
         self.host = host
-        self.port = port
+        self.ports = ports
         self.avr = None
         self.worker = None
         self.buffer = bytes()
@@ -22,7 +22,17 @@ class avrConnection:
         self.connect()
 
     def connect(self):
-        self.socket.connect((self.host, self.port))
+        connected = False
+        for port in self.ports:
+            try:
+                self.socket.connect((self.host, port))
+            except socket.error:
+                continue
+            connected = True
+            break
+
+        if connected is False:
+            raise socket.error('Could not connect to the device')
 
     def checkConnection(self):
         err = self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
@@ -396,7 +406,7 @@ class avrIndicator:
 
 def main():
     controller = avrController()
-    connection = avrConnection(TCP_IP, TCP_PORT)
+    connection = avrConnection(TCP_IP, TCP_PORTS)
     menu = avrIndicator(controller)
 
     connection.setController(controller)
