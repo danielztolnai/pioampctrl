@@ -88,7 +88,7 @@ class avrConnection:
 
 class avrController:
     def __init__(self):
-        self.volumeLimits = {'min': -80, 'max': 12, 'step': 0.5}
+        self.volumeLimits = {'min': -80.5, 'max': 12, 'step': 0.5}
         self.speakerConfigs = {0: 'Off', 1: 'A', 2: 'B', 3: 'AB'}
         self.dispatch = {'VOL': self.parseVolume,
                          'PWR': self.parsePower,
@@ -147,7 +147,8 @@ class avrController:
     # Volume
     def parseVolume(self, line):
         volume = int(line[3:6])
-        self.volume = float(-80.5 + 0.5 * volume)
+        self.volume = float(self.volumeLimits['min']
+                            + self.volumeLimits['step'] * volume)
         print('Volume is ' + str(self.volume) + ' dB')
         return self.volume
 
@@ -159,8 +160,9 @@ class avrController:
             return False
         if dB == self.volume:
             return True
-        volume = int((dB + 80.5) / 0.5)
-        volume = min(max(volume, 1), 185)
+        dB = min(max(dB, self.volumeLimits['min']), self.volumeLimits['max'])
+        volume = int((dB - self.volumeLimits['min'])
+                     / self.volumeLimits['step'])
         volume = str(volume).zfill(3)
         self.sendCommand(volume + "VL")
 
